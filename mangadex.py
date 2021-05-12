@@ -55,9 +55,12 @@ class Mangadex:
         for file in os.listdir('./output/mobiOutputs/'):
             attachFiles.append('./output/mobiOutputs/' + file)
 
-        print(attachFiles)
+        
 
-        emailTeste = EmailSender(log, "Daily Updates - MangaDex", attachFiles)
+        emailTeste = EmailSender()
+        emailTeste.createNewEmail(log, 'Daily Updates - MangaDex')
+        emailTeste.attachFiles(attachFiles)
+        emailTeste.send()
 
 
 
@@ -315,7 +318,9 @@ class Mangadex:
             os.chdir('..')
 
             print('Converting chapters to .mobi')
-            os.mkdir('mobiOutputs')
+
+            if not path.isdir('mobiOutputs'):
+                os.mkdir('mobiOutputs')
 
             htmlFilesList = self.getAllFilesFromTypeInSubdir(os.getcwd(), '*.html')
             
