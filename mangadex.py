@@ -8,6 +8,8 @@ import click
 from fnmatch import fnmatch
 import ntpath
 
+from emailSender import EmailSender
+
 class Mangadex:
     def __init__(self):
 
@@ -18,6 +20,7 @@ class Mangadex:
         credentialsFile = open('credentials.json')
         self.credentials = json.load(credentialsFile)
         self.hed = {'Authorization': 'Bearer ' + self.credentials['token']['session']}
+
 
         #Makes a connection with the mangadex
         self.connect()
@@ -41,9 +44,20 @@ class Mangadex:
             self.updateNewChaptersSortedByMangas(manga, notReadedChapters)
 
         #Creates a log file about the new chapters and mangas releases for the user
-        self.createDailyLog(self.newChaptersSortedByMangas)
+        log = self.createDailyLog(self.newChaptersSortedByMangas)
         #Iterate over the 'newChaptersSortedByMangas' attribute to download every new chapter from every manga followed
         self.downloadUpdates(self.newChaptersSortedByMangas)
+
+        attachFiles = []
+
+        os.chdir('..')
+
+        for file in os.listdir('./output/mobiOutputs/'):
+            attachFiles.append('./output/mobiOutputs/' + file)
+
+        print(attachFiles)
+
+        emailTeste = EmailSender(log, "Daily Updates - MangaDex", attachFiles)
 
 
 
@@ -66,7 +80,7 @@ class Mangadex:
             #Tenta um refresh do token
             #Try connection refreshing the token
             params = {
-                'token': self.credentials['token']['refresh']
+                'token': self.credentials['token']['session']
             }
             response = requests.get('https://api.mangadex.org/auth/refresh', headers=self.hed)
             
@@ -148,7 +162,9 @@ class Mangadex:
 
         if locales != ['null']:
             params.update({
-                'locales[]': locales
+                'locales[]': locales,
+                'order[chapter]': 'desc',
+                'order[volume]': 'desc'
             })
 
         response = requests.get('https://api.mangadex.org/manga/{}/feed'.format(mangaId), params=params, headers=self.hed)
@@ -181,8 +197,8 @@ class Mangadex:
         notReadedChapters = []
 
         #Thats a test while the API don't support del or put methods. I'm manually removing a chapter id from the 'readed chapters list'
-        readedChaptersIdList['data'].remove('ad8a3b59-f940-48b3-9f8c-1d9786b678a7')
-        #readedChaptersIdList['data'].remove('33191be9-7f20-4fc7-b85f-5c613e0dc13d')
+        readedChaptersIdList['data'].remove('03c35605-b718-47a7-b68b-2a0382ae1dae')
+        readedChaptersIdList['data'].remove('42c910b9-0432-4a70-b455-bd10e366b47f')
         
 
         for chapter in chaptersList['results']:
@@ -239,14 +255,20 @@ class Mangadex:
 
         now = datetime.now()
 
+        logContent = ''
+
         with open(now.strftime('%d-%m-%Y-%H-%M-%S') + '-log.txt', 'w') as logFile:
             for updates in newChaptersSortedByMangas:
-                logFile.write('Manga Title: \'' + updates['manga']['title'] + '\'\n')
+                logContent += 'Manga Title: \'' + updates['manga']['title'] + '\'\n'
                 for newChapter in updates['chapters']:
-                    logFile.write('\t' + newChapter['data']['attributes']['chapter'] + ': \'' + newChapter['data']['attributes']['title'] + '\'\n')
+                    logContent += '\t' + newChapter['data']['attributes']['chapter'] + ': \'' + newChapter['data']['attributes']['title'] + '\'\n'
+            
+            logFile.write(logContent)
 
         os.chdir('..')
         
+        return logContent
+
 
     def downloadUpdates(self, newChaptersSortedByMangas):
 
@@ -299,7 +321,7 @@ class Mangadex:
             
             for htmlFile in htmlFilesList:
                 chapterName = self.pathLeaf(htmlFile)
-                os.system('ebook-convert \'{}\' \'{}\' >/dev/null 2>&1'.format(htmlFile, os.path.join('mobiOutputs', chapterName.replace('html', 'mobi'))))
+                os.system('ebook-convert \'{}\' \'{}\' --output-profile kindle_pw3 --margin-bottom 0 --margin-left 0 --margin-right 0 --margin-top 0 --remove-paragraph-spacing >/dev/null 2>&1'.format(htmlFile, os.path.join('mobiOutputs', chapterName.replace('html', 'mobi'))))
             
     
 
@@ -317,7 +339,7 @@ class Mangadex:
         imageList.sort()
         mangaContent = ''
         for image in imageList:
-            mangaContent += '<img src=\"' + image + '\" height="100%" />\n<div style=\"page-break-before:always;\"></div>'
+            mangaContent += '<img src=\"' + image + '\" height="90%" />\n'
 
         htmlContent = '''
         <!DOCTYPE html>
