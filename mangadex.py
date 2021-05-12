@@ -200,7 +200,6 @@ class Mangadex:
         notReadedChapters = []
 
         #Thats a test while the API don't support del or put methods. I'm manually removing a chapter id from the 'readed chapters list'
-        readedChaptersIdList['data'].remove('03c35605-b718-47a7-b68b-2a0382ae1dae')
         readedChaptersIdList['data'].remove('42c910b9-0432-4a70-b455-bd10e366b47f')
         
 
@@ -273,6 +272,10 @@ class Mangadex:
         return logContent
 
 
+    """
+    Downloads new chapters from manga that the user follows that are marked as unread
+    Iterates over the updatesList to make that
+    """
     def downloadUpdates(self, newChaptersSortedByMangas):
 
         #Go to output folder
@@ -329,7 +332,9 @@ class Mangadex:
                 os.system('ebook-convert \'{}\' \'{}\' --output-profile kindle_pw3 --margin-bottom 0 --margin-left 0 --margin-right 0 --margin-top 0 --remove-paragraph-spacing >/dev/null 2>&1'.format(htmlFile, os.path.join('mobiOutputs', chapterName.replace('html', 'mobi'))))
             
     
-
+    """
+    This method takes a array of URLs as parameter and then downloads them in the current folder
+    """
     def downloadArrayOfImages(self, images):
         for idx, img in enumerate(images):
             response = requests.get(img, stream=True)
@@ -338,14 +343,24 @@ class Mangadex:
                     for chunk in response:
                         imageFile.write(chunk)
 
+    """
+    This method makes an HTML for a chapter with the parameters using the images on the current folder
+    """
     def makeHtmlChapter(self, mangaTitle, chapterNumber, chapterTitle):
 
+        #Make sure to only use the image files in case of rerunning the code 
         imageList = os.listdir('./')
+        for image in imageList:
+            if not image.endswith(".jpg"):
+                imageList.remove(image)
+
+        #To make images always in asc. order
         imageList.sort()
         mangaContent = ''
         for image in imageList:
             mangaContent += '<img src=\"' + image + '\" height="90%" />\n'
 
+        #Makes an HTML template for each chapter
         htmlContent = '''
         <!DOCTYPE html>
         <html lang="en">
@@ -364,6 +379,9 @@ class Mangadex:
         with open('[{chapterNumber}] - {mangaTitle}: {chapterTitle}.html'.format(chapterNumber=chapterNumber, mangaTitle=mangaTitle, chapterTitle=chapterTitle), 'w') as htmlChapterFile:
             htmlChapterFile.write(htmlContent)
 
+    """
+    This util function gets all files from a type on directory and subdirectory and return them in a list
+    """
     def getAllFilesFromTypeInSubdir(self, root, pattern):
         filesList = []
 
@@ -374,6 +392,9 @@ class Mangadex:
         
         return filesList
 
+    """
+    This function extracts the name of a file in a path
+    """
     def pathLeaf(self, path):
         head, tail = ntpath.split(path)
         return tail or ntpath.basename(head)
