@@ -1,7 +1,7 @@
-from mangadex import Mangadex
+from mangaDexKindle import MangaDexKindle
 
 def main():
-    md = Mangadex()
+    md = MangaDexKindle()
 
 if __name__ == "__main__":
     main()
