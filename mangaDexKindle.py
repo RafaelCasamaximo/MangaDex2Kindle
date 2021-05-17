@@ -8,43 +8,71 @@ from MangaDexPy import MangaDex
 class MangaDexKindle:
     """Program to get MangaDex user feed, download the new chapters and send to the user's kindle"""
 
-    def __init__(self, jsonPath: str = './json', settingsFile: str = 'settings.json') -> None:
+    def __init__(self, path: str = './json', settingsFile: str = 'settings.json') -> None:
 
         # Attributes
-        self.jsonPath = jsonPath
+        self.cli = MangaDex()
+        self.path = path
         self.settingsFile = settingsFile
         self.settings = ''
 
-        # Load credentials and check if it exists
-        if self._check_file(self.jsonPath, self.settingsFile):
-            self.settings = self._load_settings()
-        if not self._check_folder(self.jsonPath):
-            os.mkdir(self.jsonPath)
-        if not self._check_file(self.jsonPath, settingsFile):
-            self._save_settings()
+        self._load_settings()
 
-    def _load_settings(self) -> Dict:
-        """Load settings from jsonPath/settings.json"""
-        settingsPath = os.path.join(self.jsonPath, self.settingsFile)
-        with open(settingsPath, 'r') as settingsFile:
-            return json.load(settingsFile)
+    def _load_settings(self, path: str = './json', settingsPath: str = 'settings.json') -> None:
+        # Check if folder exists
+        if not os.path.isdir(path):
+            os.mkdir(path)
+            print('Creating dir ' + path)
 
-    def _save_settings(self) -> None:
-        """Save settings in jsonPath/settings.json"""
-        settingsPath = os.path.join(self.jsonPath, self.settingsFile)
-        settings = {
-            'mangadexCredentials': {
-                'username': None,
-                'password': None,
-                'token': None
+        # Check if file exists
+        settingsFilePath = os.path.join(path, settingsPath)
+        if not os.path.isfile(settingsFilePath):
+
+            print('-First Time Login:')
+            username = input('Mangadex Username: ')
+            password = input('Mangadex Password: ')
+
+            settings = {
+                'mangadexCredentials': {
+                    'username': username,
+                    'password': password,
+                    'token': None
+                }
             }
-        }
-        with open(settingsPath, 'w') as settingsFile:
-            json.dump(settings, settingsFile, indent=4)
 
-    def _check_file(self, baseDir: str, file: str) -> bool:
-        path = os.path.join(baseDir, file)
-        return os.path.isfile(path)
+            self.settings = settings
+            print('Creating file ' + settingsPath)
+            with open(settingsFilePath, 'w') as settingsFile:
+                json.dump(settings, settingsFile, indent=4)
 
-    def _check_folder(self, dir) -> bool:
-        return os.path.isdir(dir)
+        # Load settings from existent file
+        else:
+            print('Loading Settings from existent file.')
+            with open(settingsFilePath, 'r') as settingsFile:
+                self.settings = json.load(settingsFile)
+
+        isConnected = False
+        if not self.settings['mangadexCredentials']['token'] == None:
+            self.cli.session_token = self.settings['mangadexCredentials']['token']['session']
+            self.cli.refresh_token = self.settings['mangadexCredentials']['token']['refresh']
+            self.cli.session.headers['Authorization'] = self.cli.session_token
+            isConnected = self.cli.check()
+            if isConnected:
+                print('Current token still valid.')
+                return isConnected
+        if not isConnected:
+            print('Generating and saving new token with new login.')
+            isConnected = self.cli.login(self.settings['mangadexCredentials']['username'],
+                                         self.settings['mangadexCredentials']['password'])
+            if isConnected:
+                self.settings['mangadexCredentials']['token'] = {
+                    'session': self.cli.session_token, 'refresh': self.cli.refresh_token}
+
+                with open(settingsFilePath, 'w') as settingsFile:
+                    json.dump(self.settings, settingsFile, indent=4)
+
+                print('New token generated.')
+                return isConnected
+
+        print('Could not make login.')
+        return False
