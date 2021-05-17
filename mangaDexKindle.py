@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict
+from typing import Dict, List
 
 from MangaDexPy import MangaDex
 
@@ -8,14 +8,15 @@ from MangaDexPy import MangaDex
 class MangaDexKindle:
     """Program to get MangaDex user feed, download the new chapters and send to the user's kindle"""
 
-    def __init__(self, path: str = './json', settingsFile: str = 'settings.json') -> None:
+    def __init__(self, jsonPath: str = './json', settingsFile: str = 'settings.json') -> None:
 
         # Attributes
         self.cli = MangaDex()
-        self.path = path
+        self.jsonPath = jsonPath
         self.settingsFile = settingsFile
         self.settings = ''
 
+        # Stabilizes connection with MangaDex
         self._load_settings()
 
     def _load_settings(self, path: str = './json', settingsPath: str = 'settings.json') -> None:
@@ -76,3 +77,21 @@ class MangaDexKindle:
 
         print('Could not make login.')
         return False
+
+    def _get_download_list(self) -> List:
+        """
+        |
+        |-Manga Info
+        |-ChapterList|-Chapter[0]
+        |            |-Chapter[1]
+        |            |-Chapter[2]
+        |            |-...
+        |
+        |-Manga Info
+        |-ChapterList
+        |
+        """
+
+        # Pegar a lista de mangas do usuário get_user_list
+        # Criar uma função para retornar os capitulos lidos de um determinado manga (suporte da API do mangadex)
+        # Criar uma função para retornar os capitulos não lidos de um determinado manga (não tem suporte da API do mangadex)
